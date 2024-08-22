@@ -1,0 +1,184 @@
+{
+    "name": "My workflow",
+    "nodes": [
+      {
+        "parameters": {
+          "url": "http://82.112.245.62:5000/data",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "=type",
+                "value": "={{ $json.body.type }}"
+              },
+              {
+                "name": "regiao",
+                "value": "={{ $json.body.regiao }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "specifyHeaders": "json",
+          "jsonHeaders": "{\n  \"Content-Type\": \"application/json\"\n}\n",
+          "options": {}
+        },
+        "id": "395cebd3-9df3-45e7-98f0-1386bb85ce50",
+        "name": "HTTP Request",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1060,
+          60
+        ]
+      },
+      {
+        "parameters": {
+          "respondWith": "allIncomingItems",
+          "options": {}
+        },
+        "id": "b14a5519-cd08-4ab4-a3d0-b6a9bb90bd5a",
+        "name": "Respond to Webhook",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1360,
+          60
+        ]
+      },
+      {
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict"
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": true,
+                      "rightValue": "",
+                      "operator": {
+                        "type": "boolean",
+                        "operation": "true",
+                        "singleValue": true
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Segui para nossas regras de negocio"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict"
+                  },
+                  "conditions": [
+                    {
+                      "id": "c4532768-3634-476f-bfd2-f0c30f3b3d85",
+                      "leftValue": "={{ $json.body.type }}",
+                      "rightValue": "agendamento",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals",
+                        "name": "filter.operator.equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "Agendar"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "53394f5e-ba9d-406c-ade3-fbf507dd103f",
+        "name": "Switch",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          760,
+          260
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "v1/chat/",
+          "responseMode": "responseNode",
+          "options": {}
+        },
+        "id": "703f6123-5bd3-43b1-9219-19e1a7c06a84",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          540,
+          260
+        ],
+        "webhookId": "b791963d-654e-4306-83f0-400af693291e"
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "Respond to Webhook",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Switch": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Switch",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "versionId": "f590c9e5-650a-40a0-a389-56792ba0b5d5",
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "52d57967cb45d0e1243d609e22dc4f828cb8fa7e2f24ec9e9a877b6eec5d03af"
+    },
+    "id": "SUFFPsdjSDJjpgsf",
+    "tags": []
+  }
