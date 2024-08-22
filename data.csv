@@ -1,0 +1,9 @@
+imovel,disponível,valor_venda,valor_aluguel,região,n_quartos
+Apartamento Central,Sim,500000,2500,Centro,2
+Casa Suburbana,Não,350000,1500,Subúrbio,3
+Kitnet Universitária,Sim,150000,800,Universitário,1
+Apartamento Luxo,Sim,800000,3500,Luxo,3
+Casa de Praia,Sim,600000,2000,Beira-mar,4
+Cobertura Penthouse,Não,1200000,5000,Centro,4
+Apartamento Familiar,Sim,300000,1200,Subúrbio,3
+Casa Campo,Sim,200000,1000,Campo,2
