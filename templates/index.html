@@ -22,11 +22,10 @@
                     <button type="submit" class="btn btn-primary btn-block">Enviar</button>
                 </form>
                 {% if response_message %}
-                    <div class="mt-4 alert alert-info">
-                        <h5>Resposta do n8n:</h5>
-                        <p>{{ response_message }}</p>
-                    </div>
-                {% endif %}
+                <div class="mt-4">
+                    {{ response_message|safe }}
+                </div>
+            {% endif %}
             </div>
         </div>
     </div>

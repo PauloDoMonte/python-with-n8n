@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, jsonify
 import requests
 import re
 import pandas as pd
-from googletrans import Translator
 import json
 
 app = Flask(__name__)
@@ -73,9 +72,6 @@ def classificar_pergunta(pergunta):
 
 @app.route('/data', methods=['GET'])
 def get_data():
-    """
-    Endpoint que retorna os dados em formato JSON com base no tipo de pergunta.
-    """
     tipo_pergunta = request.args.get('type')
     regiao = request.args.get('regiao', default=None, type=str)
 
@@ -87,25 +83,30 @@ def get_data():
     # Processar a solicitação com base no tipo de pergunta
     if tipo_pergunta == 'disponibilidade':
         resposta = verificar_disponibilidade(df, regiao)
+        response_type = 'disponibilidade'
     elif tipo_pergunta == 'preço':
         tipo_preco = 'valor_venda' if 'venda' in request.args else 'valor_aluguel'
         resposta = buscar_preco(df, tipo_preco, regiao)
+        response_type = 'preço'
     elif tipo_pergunta == 'localização':
         resposta = encontrar_localizacao(df)
+        response_type = 'localização'
     else:
         resposta = {'error': 'Tipo de pergunta não reconhecido'}
+        response_type = 'erro'
 
-    # Retornar resposta JSON diretamente
+    # Incluir o tipo de resposta no JSON
     if isinstance(resposta, pd.DataFrame):
-        # Converter DataFrame para JSON e retornar diretamente
-        return jsonify(resposta.to_dict(orient='records'))
-    else:
-        # Retornar resposta diretamente se não for DataFrame
-        return jsonify(resposta)
+        resposta = resposta.to_dict(orient='records')
+    
+    return jsonify({
+        'response_type': response_type,
+        'data': resposta
+    })
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    translator = Translator()
     response_message = None
     
     if request.method == 'POST':
@@ -118,8 +119,8 @@ def index():
                 
                 payload = {
                     'question': text,
-                    'type': tipo_pergunta,  # Enviar o tipo da pergunta
-                    'regiao': regiao  # Enviar a região extraída
+                    'type': tipo_pergunta,
+                    'regiao': regiao
                 }
                 
                 response = requests.post(N8N_WEBHOOK_URL, json=payload)
@@ -127,7 +128,7 @@ def index():
                 if response.ok:
                     try:
                         response_text = response.text
-                        print("Resposta bruta do n8n:", response_text)  # Depuração
+                        print("Resposta bruta do N8N:", response_text)  # Depuração
 
                         # Converter resposta de texto para JSON
                         try:
@@ -136,27 +137,77 @@ def index():
                             response_message = 'Erro ao decodificar JSON da resposta do N8N.'
                             return render_template('index.html', response_message=response_message)
 
-                        if isinstance(response_json, dict) and 'dados' in response_json:
-                            dados = response_json['dados']
-                            if dados:
-                                # Formatar a resposta
-                                formatted_response = ''
-                                for item in dados:
-                                    imovel = item.get('imovel', 'N/A')
-                                    regiao = item.get('região', 'N/A')
-                                    valor_aluguel = item.get('valor_aluguel', 'N/A')
-                                    valor_venda = item.get('valor_venda', 'N/A')
-                                    formatted_response += (
-                                        f"Imóvel: {imovel}, Região: {regiao}, Aluguel: {valor_aluguel}, Venda: {valor_venda}\n"
-                                    )
-                                
-                                # Traduzir a resposta
-                                translated_response = translator.translate(formatted_response, src="en", dest="pt")
-                                response_message = translated_response.text
-                            else:
-                                response_message = 'Nenhum dado retornado pelo N8N.'
+                        # Verificar o tipo de resposta
+                        response_type = response_json.get('response_type', 'erro')
+                        data = response_json.get('data', [])
+
+                        if response_type == 'disponibilidade':
+                            # Construir a tabela de disponibilidade
+                            formatted_response = (
+                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                "<tr>"
+                                "<th>Imóvel</th>"
+                                "<th>Região</th>"
+                                "<th>Disponível</th>"
+                                "</tr>"
+                            )
+                            for item in data:
+                                imovel = item.get('imovel', 'N/A')
+                                regiao = item.get('região', 'N/A')
+                                disponivel = item.get('disponível', 'N/A')
+                                formatted_response += (
+                                    f"<tr>"
+                                    f"<td>{imovel}</td>"
+                                    f"<td>{regiao}</td>"
+                                    f"<td>{disponivel}</td>"
+                                    f"</tr>"
+                                )
+                            formatted_response += "</table>"
+
+                        elif response_type == 'preço':
+                            # Construir a tabela de preço
+                            formatted_response = (
+                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                "<tr>"
+                                "<th>Imóvel</th>"
+                                "<th>Preço</th>"
+                                "</tr>"
+                            )
+                            for item in data:
+                                imovel = item.get('imovel', 'N/A')
+                                preco = item.get('valor_aluguel', 'N/A') if 'aluguel' in text else item.get('valor_venda', 'N/A')
+                                formatted_response += (
+                                    f"<tr>"
+                                    f"<td>{imovel}</td>"
+                                    f"<td>{preco}</td>"
+                                    f"</tr>"
+                                )
+                            formatted_response += "</table>"
+
+                        elif response_type == 'localização':
+                            # Construir a tabela de localização
+                            formatted_response = (
+                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                "<tr>"
+                                "<th>Imóvel</th>"
+                                "<th>Região</th>"
+                                "</tr>"
+                            )
+                            for item in data:
+                                imovel = item.get('imovel', 'N/A')
+                                regiao = item.get('região', 'N/A')
+                                formatted_response += (
+                                    f"<tr>"
+                                    f"<td>{imovel}</td>"
+                                    f"<td>{regiao}</td>"
+                                    f"</tr>"
+                                )
+                            formatted_response += "</table>"
+
                         else:
-                            response_message = 'Resposta inválida do N8N.'
+                            formatted_response = 'Resposta inválida do N8N.'
+
+                        response_message = formatted_response
                     except ValueError:
                         response_message = 'Resposta inválida do N8N'
                 else:
