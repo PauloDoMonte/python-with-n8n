@@ -7,7 +7,7 @@ import json
 app = Flask(__name__)
 
 # URL do Webhook do n8n
-N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/v1/chat'
+N8N_WEBHOOK_URL = 'http://localhost:5678/webhook-test/v1/chat'
 
 # Carregar dados do CSV
 def carregar_dados_csv():
@@ -82,6 +82,7 @@ def get_data():
     regiao = request.args.get('regiao', default=None, type=str)
 
     print(f"Received type: {tipo_pergunta}")
+    print(f"Região: {regiao}")
 
     # Carregar dados
     df = carregar_dados_csv()
