@@ -94,11 +94,11 @@ def get_data():
     else:
         resposta = {'error': 'Tipo de pergunta não reconhecido'}
 
-    # Converter resposta para JSON
+    # Encapsular a resposta em um objeto com a chave 'dados'
     if isinstance(resposta, pd.DataFrame):
-        resposta_json = resposta.to_dict(orient='records')
+        resposta_json = {'dados': resposta.to_dict(orient='records')}
     else:
-        resposta_json = resposta
+        resposta_json = {'dados': resposta}
 
     return jsonify(resposta_json)
 
