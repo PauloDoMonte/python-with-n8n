@@ -77,6 +77,8 @@ def get_data():
     """
     tipo_pergunta = request.args.get('type')
     regiao = request.args.get('regiao', default=None, type=str)
+
+    print(f"Received type: {tipo_pergunta}")
     
     df = carregar_dados_csv()
     
