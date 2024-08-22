@@ -3,6 +3,7 @@ import requests
 import re
 import pandas as pd
 from googletrans import Translator
+import json
 
 app = Flask(__name__)
 
@@ -94,13 +95,13 @@ def get_data():
     else:
         resposta = {'error': 'Tipo de pergunta não reconhecido'}
 
-    # Encapsular a resposta em um objeto com a chave 'dados'
+    # Retornar resposta JSON diretamente
     if isinstance(resposta, pd.DataFrame):
-        resposta_json = {'dados': resposta.to_dict(orient='records')}
+        # Converter DataFrame para JSON e retornar diretamente
+        return jsonify(resposta.to_dict(orient='records'))
     else:
-        resposta_json = {'dados': resposta}
-
-    return jsonify(resposta_json)
+        # Retornar resposta diretamente se não for DataFrame
+        return jsonify(resposta)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -125,9 +126,37 @@ def index():
                 
                 if response.ok:
                     try:
-                        response_json = response.json()
-                        translated_response = translator.translate(response_json.get('response', 'Sem resposta'), src="en", dest="pt")
-                        response_message = translated_response.text
+                        response_text = response.text
+                        print("Resposta bruta do n8n:", response_text)  # Depuração
+
+                        # Converter resposta de texto para JSON
+                        try:
+                            response_json = json.loads(response_text)
+                        except json.JSONDecodeError:
+                            response_message = 'Erro ao decodificar JSON da resposta do N8N.'
+                            return render_template('index.html', response_message=response_message)
+
+                        if isinstance(response_json, dict) and 'dados' in response_json:
+                            dados = response_json['dados']
+                            if dados:
+                                # Formatar a resposta
+                                formatted_response = ''
+                                for item in dados:
+                                    imovel = item.get('imovel', 'N/A')
+                                    regiao = item.get('região', 'N/A')
+                                    valor_aluguel = item.get('valor_aluguel', 'N/A')
+                                    valor_venda = item.get('valor_venda', 'N/A')
+                                    formatted_response += (
+                                        f"Imóvel: {imovel}, Região: {regiao}, Aluguel: {valor_aluguel}, Venda: {valor_venda}\n"
+                                    )
+                                
+                                # Traduzir a resposta
+                                translated_response = translator.translate(formatted_response, src="en", dest="pt")
+                                response_message = translated_response.text
+                            else:
+                                response_message = 'Nenhum dado retornado pelo N8N.'
+                        else:
+                            response_message = 'Resposta inválida do N8N.'
                     except ValueError:
                         response_message = 'Resposta inválida do N8N'
                 else:
@@ -138,6 +167,7 @@ def index():
             response_message = 'Texto vazio enviado.'
 
     return render_template('index.html', response_message=response_message)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
