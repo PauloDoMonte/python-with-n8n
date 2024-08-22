@@ -1,0 +1,4 @@
+htmlcov/
+venv/
+n8n-data/
+.coverage
