@@ -28,7 +28,9 @@ def buscar_preco(df, tipo, regiao=None):
     return df[['imovel', tipo]]
 
 # Função para encontrar localização
-def encontrar_localizacao(df):
+def encontrar_localizacao(df, regiao=None):
+    if regiao:
+        df = df[df['região'].str.contains(regiao, case=False, na=False)]
     return df[['imovel', 'região']]
 
 def extrair_regiao(pergunta):
@@ -43,13 +45,13 @@ def extrair_regiao(pergunta):
 
 def classificar_pergunta(pergunta):
     """
-    Classifica o tipo de pergunta como relacionada à disponibilidade, preço ou localização.
+    Classifica o tipo de pergunta como relacionada à disponibilidade, preço, localização ou agendamento.
     
     Args:
         pergunta (str): A pergunta do usuário.
         
     Returns:
-        str: O tipo de pergunta classificado como 'disponibilidade', 'preço', 'localização', 
+        str: O tipo de pergunta classificado como 'disponibilidade', 'preço', 'localização', 'agendamento' 
         ou 'indefinido' se não for possível classificar.
     """
     pergunta = pergunta.lower()  # Converter para minúsculas para facilitar a correspondência
@@ -65,6 +67,10 @@ def classificar_pergunta(pergunta):
     # Classificar como localização
     elif re.search(r'\b(localização|região|onde está|em que região|localização da propriedade|onde fica|qual é a localização|em qual área|em qual bairro|localização exata)\b', pergunta, re.IGNORECASE):
         return 'localização'
+    
+    # Classificar como agendamento
+    elif re.search(r'\b(agendar|marcar|marcação|agendamento|reservar|marcar visita|marcar horário|marcar reunião|agendar visita|agendar horário|agendar reunião|data disponível|horário disponível|reservar data|reservar horário)\b', pergunta, re.IGNORECASE):
+        return 'agendamento'
     
     # Caso não se enquadre nas categorias acima
     else:
@@ -89,8 +95,12 @@ def get_data():
         resposta = buscar_preco(df, tipo_preco, regiao)
         response_type = 'preço'
     elif tipo_pergunta == 'localização':
-        resposta = encontrar_localizacao(df)
+        resposta = encontrar_localizacao(df, regiao)
         response_type = 'localização'
+    elif tipo_pergunta == 'agendamento':
+        # Placeholder para a lógica de agendamento
+        resposta = {'message': 'Funcionalidade de agendamento ainda não implementada.'}
+        response_type = 'agendamento'
     else:
         resposta = {'error': 'Tipo de pergunta não reconhecido'}
         response_type = 'erro'
@@ -103,7 +113,6 @@ def get_data():
         'response_type': response_type,
         'data': resposta
     })
-
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -127,89 +136,96 @@ def index():
                 
                 if response.ok:
                     try:
-                        response_text = response.text
-                        print("Resposta bruta do N8N:", response_text)  # Depuração
+                        response_json = response.json()
+                        print("Resposta JSON do N8N:", response_json)  # Depuração
 
-                        # Converter resposta de texto para JSON
-                        try:
-                            response_json = json.loads(response_text)
-                        except json.JSONDecodeError:
-                            response_message = 'Erro ao decodificar JSON da resposta do N8N.'
-                            return render_template('index.html', response_message=response_message)
+                        # Verificar se a resposta JSON é uma lista
+                        if isinstance(response_json, list) and 'data' in response_json[0]:
+                            data = response_json[0]['data']
+                            response_type = response_json[0]['response_type']
 
-                        # Verificar o tipo de resposta
-                        response_type = response_json.get('response_type', 'erro')
-                        data = response_json.get('data', [])
-
-                        if response_type == 'disponibilidade':
-                            # Construir a tabela de disponibilidade
-                            formatted_response = (
-                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
-                                "<tr>"
-                                "<th>Imóvel</th>"
-                                "<th>Região</th>"
-                                "<th>Disponível</th>"
-                                "</tr>"
-                            )
-                            for item in data:
-                                imovel = item.get('imovel', 'N/A')
-                                regiao = item.get('região', 'N/A')
-                                disponivel = item.get('disponível', 'N/A')
-                                formatted_response += (
-                                    f"<tr>"
-                                    f"<td>{imovel}</td>"
-                                    f"<td>{regiao}</td>"
-                                    f"<td>{disponivel}</td>"
-                                    f"</tr>"
+                            # Formatar resposta de acordo com o tipo de resposta
+                            if response_type == 'disponibilidade':
+                                formatted_response = (
+                                    "Temos esses imóveis disponíveis para você:<br>"
+                                    "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                    "<tr>"
+                                    "<th>Imóvel</th>"
+                                    "<th>Região</th>"
+                                    "<th>Valor de Aluguel (R$)</th>"
+                                    "<th>Valor de Venda (R$)</th>"
+                                    "</tr>"
                                 )
-                            formatted_response += "</table>"
+                                
+                                for item in data:
+                                    imovel = item.get('imovel', 'N/A')
+                                    regiao = item.get('região', 'N/A')
+                                    valor_aluguel = item.get('valor_aluguel', 'N/A')
+                                    valor_venda = item.get('valor_venda', 'N/A')
+                                    formatted_response += (
+                                        f"<tr>"
+                                        f"<td>{imovel}</td>"
+                                        f"<td>{regiao}</td>"
+                                        f"<td>{valor_aluguel}</td>"
+                                        f"<td>{valor_venda}</td>"
+                                        f"</tr>"
+                                    )
+                                
+                                formatted_response += "</table>"
+                                response_message = formatted_response
 
-                        elif response_type == 'preço':
-                            # Construir a tabela de preço
-                            formatted_response = (
-                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
-                                "<tr>"
-                                "<th>Imóvel</th>"
-                                "<th>Preço</th>"
-                                "</tr>"
-                            )
-                            for item in data:
-                                imovel = item.get('imovel', 'N/A')
-                                preco = item.get('valor_aluguel', 'N/A') if 'aluguel' in text else item.get('valor_venda', 'N/A')
-                                formatted_response += (
-                                    f"<tr>"
-                                    f"<td>{imovel}</td>"
-                                    f"<td>{preco}</td>"
-                                    f"</tr>"
+                            elif response_type == 'preço':
+                                formatted_response = (
+                                    "Aqui estão os preços dos imóveis que encontramos para você:<br>"
+                                    "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                    "<tr>"
+                                    "<th>Imóvel</th>"
+                                    "<th>Preço (R$)</th>"
+                                    "</tr>"
                                 )
-                            formatted_response += "</table>"
+                                
+                                for item in data:
+                                    imovel = item.get('imovel', 'N/A')
+                                    preco = item.get('valor_venda', 'N/A') if 'valor_venda' in item else item.get('valor_aluguel', 'N/A')
+                                    formatted_response += (
+                                        f"<tr>"
+                                        f"<td>{imovel}</td>"
+                                        f"<td>{preco}</td>"
+                                        f"</tr>"
+                                    )
+                                
+                                formatted_response += "</table>"
+                                response_message = formatted_response
 
-                        elif response_type == 'localização':
-                            # Construir a tabela de localização
-                            formatted_response = (
-                                "<table border='1' style='width:100%; border-collapse: collapse;'>"
-                                "<tr>"
-                                "<th>Imóvel</th>"
-                                "<th>Região</th>"
-                                "</tr>"
-                            )
-                            for item in data:
-                                imovel = item.get('imovel', 'N/A')
-                                regiao = item.get('região', 'N/A')
-                                formatted_response += (
-                                    f"<tr>"
-                                    f"<td>{imovel}</td>"
-                                    f"<td>{regiao}</td>"
-                                    f"</tr>"
+                            elif response_type == 'localização':
+                                formatted_response = (
+                                    "Aqui estão as localizações dos imóveis que encontramos:<br>"
+                                    "<table border='1' style='width:100%; border-collapse: collapse;'>"
+                                    "<tr>"
+                                    "<th>Imóvel</th>"
+                                    "<th>Região</th>"
+                                    "</tr>"
                                 )
-                            formatted_response += "</table>"
+                                
+                                for item in data:
+                                    imovel = item.get('imovel', 'N/A')
+                                    regiao = item.get('região', 'N/A')
+                                    formatted_response += (
+                                        f"<tr>"
+                                        f"<td>{imovel}</td>"
+                                        f"<td>{regiao}</td>"
+                                        f"</tr>"
+                                    )
+                                
+                                formatted_response += "</table>"
+                                response_message = formatted_response
+                            else:
+                                response_message = 'Tipo de resposta não reconhecido.'
 
                         else:
-                            formatted_response = 'Resposta inválida do N8N.'
-
-                        response_message = formatted_response
-                    except ValueError:
-                        response_message = 'Resposta inválida do N8N'
+                            response_message = 'Resposta inválida do N8N.'
+                    except Exception as e:
+                        response_message = f'Erro ao processar os dados: {e}'
                 else:
                     response_message = 'Erro na requisição ao N8N'
             except Exception as e:
@@ -218,7 +234,6 @@ def index():
             response_message = 'Texto vazio enviado.'
 
     return render_template('index.html', response_message=response_message)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

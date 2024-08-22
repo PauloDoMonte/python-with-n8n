@@ -23,9 +23,11 @@
                 </form>
                 {% if response_message %}
                 <div class="mt-4">
-                    {{ response_message|safe }}
+                    <div class="alert alert-info" role="alert">
+                        {{ response_message|safe }}
+                    </div>
                 </div>
-            {% endif %}
+                {% endif %}
             </div>
         </div>
     </div>
