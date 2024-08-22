@@ -79,9 +79,11 @@ def get_data():
     regiao = request.args.get('regiao', default=None, type=str)
 
     print(f"Received type: {tipo_pergunta}")
-    
+
+    # Carregar dados
     df = carregar_dados_csv()
-    
+
+    # Processar a solicitação com base no tipo de pergunta
     if tipo_pergunta == 'disponibilidade':
         resposta = verificar_disponibilidade(df, regiao)
     elif tipo_pergunta == 'preço':
@@ -90,9 +92,14 @@ def get_data():
     elif tipo_pergunta == 'localização':
         resposta = encontrar_localizacao(df)
     else:
-        resposta = 'Tipo de pergunta não reconhecido'
-    
-    resposta_json = resposta.to_dict(orient='records') if isinstance(resposta, pd.DataFrame) else {'response': resposta}
+        resposta = {'error': 'Tipo de pergunta não reconhecido'}
+
+    # Converter resposta para JSON
+    if isinstance(resposta, pd.DataFrame):
+        resposta_json = resposta.to_dict(orient='records')
+    else:
+        resposta_json = resposta
+
     return jsonify(resposta_json)
 
 @app.route('/', methods=['GET', 'POST'])
