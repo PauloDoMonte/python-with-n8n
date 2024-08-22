@@ -7,7 +7,7 @@ import json
 app = Flask(__name__)
 
 # URL do Webhook do n8n
-N8N_WEBHOOK_URL = 'http://localhost:5678/webhook-test/v1/chat'
+N8N_WEBHOOK_URL = 'http://localhost:5678/webhook/v1/chat'
 
 # Carregar dados do CSV
 def carregar_dados_csv():
@@ -90,13 +90,16 @@ def get_data():
     if tipo_pergunta == 'disponibilidade':
         resposta = verificar_disponibilidade(df, regiao)
         response_type = 'disponibilidade'
+    
     elif tipo_pergunta == 'preço':
-        tipo_preco = 'valor_venda' if 'venda' in request.args else 'valor_aluguel'
+        tipo_preco = 'valor_venda' if 'valor_venda' in request.args else 'valor_aluguel'
         resposta = buscar_preco(df, tipo_preco, regiao)
         response_type = 'preço'
+    
     elif tipo_pergunta == 'localização':
         resposta = encontrar_localizacao(df, regiao)
         response_type = 'localização'
+
     elif tipo_pergunta == 'agendamento':
         # Placeholder para a lógica de agendamento
         resposta = {'message': 'Funcionalidade de agendamento ainda não implementada.'}
@@ -219,21 +222,26 @@ def index():
                                 
                                 formatted_response += "</table>"
                                 response_message = formatted_response
+                            
+                            elif response_type == 'agendamento':
+                                response_message = 'Funcionalidade de agendamento ainda não implementada.'
                             else:
                                 response_message = 'Tipo de resposta não reconhecido.'
 
                         else:
                             response_message = 'Resposta inválida do N8N.'
-                    except Exception as e:
-                        response_message = f'Erro ao processar os dados: {e}'
-                else:
-                    response_message = 'Erro na requisição ao N8N'
-            except Exception as e:
-                response_message = f'Erro ao processar os dados: {e}'
-        else:
-            response_message = 'Texto vazio enviado.'
 
+                    except json.JSONDecodeError:
+                        response_message = 'Erro ao decodificar a resposta JSON.'
+
+                else:
+                    response_message = 'Erro na solicitação ao N8N.'
+
+            except Exception as e:
+                response_message = f'Ocorreu um erro: {str(e)}'
+    
     return render_template('index.html', response_message=response_message)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
