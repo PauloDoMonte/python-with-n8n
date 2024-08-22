@@ -227,7 +227,7 @@ def index():
                             elif response_type == 'agendamento':
                                 response_message = 'Funcionalidade de agendamento ainda não implementada.'
                             else:
-                                response_message = 'Tipo de resposta não reconhecido.'
+                                response_message = 'Desculpa, não consegui entender a sua mensagem.<br>Aqui você pode pesquisar por imoveis de acordo a sua região, valor do imovel e a sua disponibilidade.'
 
                         else:
                             response_message = 'Resposta inválida do N8N.'
