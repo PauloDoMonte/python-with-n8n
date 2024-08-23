@@ -7,7 +7,7 @@ import json
 app = Flask(__name__)
 
 # URL do Webhook do n8n
-N8N_WEBHOOK_URL = 'http://localhost:5678/webhook-test/v1/chat'
+N8N_WEBHOOK_URL = 'https://domonte.app.n8n.cloud/webhook/v1/chat/'
 
 # Carregar dados do CSV
 def carregar_dados_csv():
